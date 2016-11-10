@@ -7,6 +7,7 @@ MAINTAINER Ryan Criss "rcriss@cisco.com"
 EXPOSE 5000
 
 RUN pip install --no-cache-dir setuptools wheel
+RUN pip install --upgrade pip
 
 ADD . /app
 WORKDIR /app
