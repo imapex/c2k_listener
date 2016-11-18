@@ -1,25 +1,107 @@
-from flask import Flask, request
-from flask_restful import Resource, Api, reqparse
+#!flask/bin/python
+from flask import Flask, jsonify, abort, request, make_response, url_for
+from flask_httpauth import HTTPBasicAuth
+import datetime
 
+app = Flask(__name__, static_url_path = "")
+auth = HTTPBasicAuth()
 
-app = Flask(__name__)
-app = Flask(__name__)
-api = Api(app)
+@auth.get_password
+def get_password(username):
+    if username == 'miguel':
+        return 'python'
+    return None
 
-class HelloWorld(Resource):
-    def get(self):
-        text = "Hello World!"
-        return text
+@auth.error_handler
+def unauthorized():
+    return make_response(jsonify( { 'error': 'Unauthorized access' } ), 403)
+    # return 403 instead of 401 to prevent browsers from displaying the default auth dialog
+    
+@app.errorhandler(400)
+def not_found(error):
+    return make_response(jsonify( { 'error': 'Bad request' } ), 400)
 
-api.add_resource(HelloWorld, '/hello/world')
+@app.errorhandler(404)
+def not_found(error):
+    return make_response(jsonify( { 'error': 'Not found' } ), 404)
 
-class HelloUniverse(Resource):
-    def get(self):
-        text = "Hello Universe!"
-        return text
+busses = [
+    {
+        'id': 1,
+        'name': u'bus505',
+        'route': u'Chicago North 5',
+        'status': u'Online',
+        'last_location': u'12345',
+        'last_checkin': u'06:05:00'
+    }
+]
 
-api.add_resource(HelloUniverse, '/hello/universe')
+def make_public_bus(bus):
+    new_bus = {}
+    for field in bus:
+        new_bus[field] = bus[field]
+    new_bus['uri'] = url_for('get_bus', bus_name=bus['name'], _external=True)
+    return new_bus
+    
+@app.route('/api/v1.0/busses', methods = ['GET'])
+#@auth.login_required
+def get_busses():
+    return jsonify( { 'busses': map(make_public_bus, busses) } )
 
+@app.route('/api/v1.0/busses/<bus_name>', methods = ['GET'])
+#@auth.login_required
+def get_bus(bus_name):
+    bus = filter(lambda t: t['name'] == bus_name, busses)
+    if len(bus) == 0:
+        abort(404)
+    return jsonify( { 'bus': make_public_bus(bus[0]) } )
+
+@app.route('/api/v1.0/busses', methods = ['POST'])
+#@auth.login_required
+def create_bus():
+    if not request.json or not 'id' in request.json:
+        abort(400)
+    bus = {
+        'id': busses[-1]['id'] + 1,
+        'name': request.json['name'],
+        'route': request.json['route'],
+        'status': request.json['status'],
+        'last_location': request.json['last_location'],
+        'last_checkin': request.json['last_checkin']
+    }
+    busses.append(bus)
+    return jsonify( { 'bus': make_public_bus(bus) } ), 201
+
+@app.route('/api/v1.0/busses/<bus_name>', methods = ['PUT'])
+#@auth.login_required
+def update_bus(bus_name):
+    bus = filter(lambda t: t['name'] == bus_name, busses)
+    if len(bus) == 0:
+        abort(404)
+    if not request.json:
+        abort(404)
+    if 'route' in request.json and type(request.json['route']) != unicode:
+        abort(400)
+    if 'status' in request.json and type(request.json['status']) is not unicode:
+        abort(400)
+    if 'last_location' in request.json and type(request.json['last_location']) is not unicode:
+        abort(400)
+    if 'last_checkin' in request.json and type(request.json['last_checkin']) is not unicode:
+        abort(400)
+    bus[0]['route'] = request.json.get('route', bus[0]['route'])
+    bus[0]['status'] = request.json.get('status', bus[0]['status'])
+    bus[0]['last_location'] = request.json.get('last_location', bus[0]['last_location'])
+    bus[0]['last_checkin'] = datetime.datetime.now().isoformat()
+    return jsonify( { 'bus': make_public_bus(bus[0]) } )
+    
+@app.route('/api/v1.0/busses/<bus_name>', methods = ['DELETE'])
+#@auth.login_required
+def delete_bus(bus_name):
+    bus = filter(lambda t: t['name'] == bus_name, busses)
+    if len(bus) == 0:
+        abort(404)
+    busses.remove(bus[0])
+    return jsonify( { 'result': True } )
+    
 if __name__ == '__main__':
-    # Run Flask
-    app.run(debug=True, host='0.0.0.0', port=int("5000"))
+    app.run(debug = True)
