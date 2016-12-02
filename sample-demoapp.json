@@ -22,6 +22,6 @@
     "mem": 16,
     "env": {
 	"c2k_msgbroker": "MSGBROKER",
-        "c2k_msgbroker_app_key": "APPKEY",
+        "c2k_msgbroker_app_key": "APPKEY"
     }
 }
