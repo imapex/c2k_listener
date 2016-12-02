@@ -1,10 +1,14 @@
 #!flask/bin/python
 from flask import Flask, jsonify, abort, request, make_response, url_for
 from flask_httpauth import HTTPBasicAuth
-import datetime
+import datetime, requests, os
 
 app = Flask(__name__, static_url_path = "")
 auth = HTTPBasicAuth()
+
+spark_app = "abc"
+c2k_msgbroker = os.getenv("c2k_msgbroker")
+c2k_msgbroker_app_key = os.getenv("c2k_msgbroker_app_key")
 
 @auth.get_password
 def get_password(username):
@@ -30,7 +34,7 @@ busses = [
         'id': 1,
         'name': u'bus505',
         'route': u'Chicago North 5',
-        'status': u'Online',
+        'status': u'offline',
         'last_location': u'12345',
         'last_checkin': u'06:05:00'
     }
@@ -72,6 +76,7 @@ def create_bus():
     busses.append(bus)
     return jsonify( { 'bus': make_public_bus(bus) } ), 201
 
+### Update Bus ###
 @app.route('/api/v1.0/busses/<bus_name>', methods = ['PUT'])
 #@auth.login_required
 def update_bus(bus_name):
@@ -89,11 +94,23 @@ def update_bus(bus_name):
     if 'last_checkin' in request.json and type(request.json['last_checkin']) is not unicode:
         abort(400)
     bus[0]['route'] = request.json.get('route', bus[0]['route'])
-    bus[0]['status'] = request.json.get('status', bus[0]['status'])
     bus[0]['last_location'] = request.json.get('last_location', bus[0]['last_location'])
     bus[0]['last_checkin'] = datetime.datetime.now().isoformat()
+    if bus[0]['status'] == "offline":
+        bus[0]['status'] = "online"
+        headers = {'content-type': 'application/json'}
+        json_data = '{"appKey":"bus-01-gPHtqNh9Ua","message":"The following bus is online: '+bus_name+'"}'
+        r = requests.post("http://"+c2k_msgbroker+"/c2k",json_data, headers=headers)
+    elif request.json.get('status', bus[0]['status']) == "offline":
+        bus[0]['status'] = "offline"
+        headers = {'content-type': 'application/json'}
+        json_data = '{"appKey":"bus-01-gPHtqNh9Ua","message":"The following bus is offline: ' + bus_name + '"}'
+        r = requests.post("http://" + c2k_msgbroker + "/c2k", json_data, headers=headers)
+    else:
+        bus[0]['status'] = request.json.get('status', bus[0]['status'])
     return jsonify( { 'bus': make_public_bus(bus[0]) } )
-    
+
+### Delete Bus ###
 @app.route('/api/v1.0/busses/<bus_name>', methods = ['DELETE'])
 #@auth.login_required
 def delete_bus(bus_name):
