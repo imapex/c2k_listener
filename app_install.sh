@@ -29,7 +29,7 @@ read c2k_msgbroker_app_key
 #echo "Marathon API calls will be sent to: "
 #echo "https://$MANTL_CONTROL:8080/"
 
-cp sample-demoapp.json $docker_username-c2k_listener.json
+cp sample-c2k_listener.json $docker_username-c2k_listener.json
 sed -i "" -e "s/DOCKERUSER/$docker_username/g" $docker_username-c2k_listener.json
 sed -i "" -e "s/MSGBROKER/$c2k_msgbroker/g" $docker_username-c2k_listener.json
 sed -i "" -e "s/APPKEY/$c2k_msgbroker_app_key/g" $docker_username-c2k_listener.json
