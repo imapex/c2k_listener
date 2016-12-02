@@ -104,7 +104,7 @@ def update_bus(bus_name):
     elif request.json.get('status', bus[0]['status']) == "offline":
         bus[0]['status'] = "offline"
         headers = {'content-type': 'application/json'}
-        json_data = '{"appKey":"bus-01-gPHtqNh9Ua","message":"The following bus is offline: ' + bus_name + '"}'
+        json_data = '{"appKey":"'+c2k_msgbroker_app_key+'","message":"The following bus is offline: ' + bus_name + '"}'
         r = requests.post("http://" + c2k_msgbroker + "/c2k", json_data, headers=headers)
     else:
         bus[0]['status'] = request.json.get('status', bus[0]['status'])
