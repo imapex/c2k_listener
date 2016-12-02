@@ -128,7 +128,7 @@ def update_bus(bus_name):
     bus[0]['last_checkin'] = datetime.datetime.now().isoformat()
 
     # If bus is previously online, any status update will trigger the bus into an online state and send a spark notification
-    if bus[0]['status'] == "offline":
+    if bus[0]['status'] == "offline" or bus[0]['status'] == "":
         bus[0]['status'] = "online"
         headers = {'content-type': 'application/json'}
         json_data = '{"appKey":"bus-01-gPHtqNh9Ua","message":"The following bus is online: '+bus_name+'"}'
