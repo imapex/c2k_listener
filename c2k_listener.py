@@ -38,7 +38,7 @@ def not_found(error):
 busses = [
     {
         'id': 1,
-        'name': u'bus0648',
+        'name': u'bus0001',
         'route': u'Chicago North 5',
         'status': u'offline',
         'last_location': u'12345',
