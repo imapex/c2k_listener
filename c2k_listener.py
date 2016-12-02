@@ -3,13 +3,15 @@ from flask import Flask, jsonify, abort, request, make_response, url_for
 from flask_httpauth import HTTPBasicAuth
 import datetime, requests, os
 
+### Setup Flask App and Authentication ###
 app = Flask(__name__, static_url_path = "")
 auth = HTTPBasicAuth()
 
-spark_app = "abc"
+### Import Environment Variables ###
 c2k_msgbroker = os.getenv("c2k_msgbroker")
 c2k_msgbroker_app_key = os.getenv("c2k_msgbroker_app_key")
 
+### Authentication for future feature ###
 @auth.get_password
 def get_password(username):
     if username == 'miguel':
@@ -20,7 +22,9 @@ def get_password(username):
 def unauthorized():
     return make_response(jsonify( { 'error': 'Unauthorized access' } ), 403)
     # return 403 instead of 401 to prevent browsers from displaying the default auth dialog
-    
+
+
+### Error Handling ###
 @app.errorhandler(400)
 def not_found(error):
     return make_response(jsonify( { 'error': 'Bad request' } ), 400)
@@ -29,6 +33,8 @@ def not_found(error):
 def not_found(error):
     return make_response(jsonify( { 'error': 'Not found' } ), 404)
 
+
+### Bus Array for temporary storage of bus information.
 busses = [
     {
         'id': 1,
@@ -40,18 +46,26 @@ busses = [
     }
 ]
 
+
+### Present Bus objects to API requests
 def make_public_bus(bus):
     new_bus = {}
     for field in bus:
         new_bus[field] = bus[field]
     new_bus['uri'] = url_for('get_bus', bus_name=bus['name'], _external=True)
     return new_bus
-    
+
+
+### Get List of Busses ###
+### This function is utilized to return a list of all busses and their data
 @app.route('/api/v1.0/busses', methods = ['GET'])
 #@auth.login_required
 def get_busses():
     return jsonify( { 'busses': map(make_public_bus, busses) } )
 
+
+### Get Specifc Bus Data ###
+### This function is utilized to return the data for a single bus
 @app.route('/api/v1.0/busses/<bus_name>', methods = ['GET'])
 #@auth.login_required
 def get_bus(bus_name):
@@ -60,6 +74,9 @@ def get_bus(bus_name):
         abort(404)
     return jsonify( { 'bus': make_public_bus(bus[0]) } )
 
+
+### Create Bus ###
+### This function is utilized to create a new bus
 @app.route('/api/v1.0/busses', methods = ['POST'])
 #@auth.login_required
 def create_bus():
@@ -76,11 +93,16 @@ def create_bus():
     busses.append(bus)
     return jsonify( { 'bus': make_public_bus(bus) } ), 201
 
+
 ### Update Bus ###
+### This function is utilized by the remote C2K IOx service to update specifc bus data such as status, GPS coordinates, kid data, etc.
 @app.route('/api/v1.0/busses/<bus_name>', methods = ['PUT'])
 #@auth.login_required
 def update_bus(bus_name):
+    # Find a single bus by name
     bus = filter(lambda t: t['name'] == bus_name, busses)
+
+    # Validate JSON data
     if len(bus) == 0:
         abort(404)
     if not request.json:
@@ -93,9 +115,13 @@ def update_bus(bus_name):
         abort(400)
     if 'last_checkin' in request.json and type(request.json['last_checkin']) is not unicode:
         abort(400)
+
+    # Update basic bus data
     bus[0]['route'] = request.json.get('route', bus[0]['route'])
     bus[0]['last_location'] = request.json.get('last_location', bus[0]['last_location'])
     bus[0]['last_checkin'] = datetime.datetime.now().isoformat()
+
+    # If bus is previously online, any status update will trigger the bus into an online state and send a spark notification
     if bus[0]['status'] == "offline":
         bus[0]['status'] = "online"
         headers = {'content-type': 'application/json'}
@@ -110,7 +136,9 @@ def update_bus(bus_name):
         bus[0]['status'] = request.json.get('status', bus[0]['status'])
     return jsonify( { 'bus': make_public_bus(bus[0]) } )
 
+
 ### Delete Bus ###
+### This function is used to delete a bus by its bus name.
 @app.route('/api/v1.0/busses/<bus_name>', methods = ['DELETE'])
 #@auth.login_required
 def delete_bus(bus_name):
@@ -119,6 +147,10 @@ def delete_bus(bus_name):
         abort(404)
     busses.remove(bus[0])
     return jsonify( { 'result': True } )
-    
+
+
+####################
+### Main Function###
+####################
 if __name__ == '__main__':
     app.run(debug = True, host='0.0.0.0', port=int("5000"))
