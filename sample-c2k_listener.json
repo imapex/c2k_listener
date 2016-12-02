@@ -2,7 +2,7 @@
     "container": {
         "type": "DOCKER",
         "docker": {
-            "image": "DOCKERUSER/c2k_listener:dev",
+            "image": "DOCKERUSER/c2k_listener:latest",
             "forcePullImage": true,
             "network": "BRIDGE",
             "portMappings": [{
