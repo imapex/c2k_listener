@@ -80,10 +80,16 @@ def get_bus(bus_name):
 @app.route('/api/v1.0/busses', methods = ['POST'])
 #@auth.login_required
 def create_bus():
-    if not request.json or not 'id' in request.json:
+    if not request.json or not 'name' in request.json:
         abort(400)
+    # Determine Bus Id
+    if len(busses) == 0:
+        bus_id = 1
+    else:
+        bus_id = busses[-1]['id'] + 1
+
     bus = {
-        'id': busses[-1]['id'] + 1,
+        'id': bus_id,
         'name': request.json['name'],
         'route': request.json['route'],
         'status': request.json['status'],
