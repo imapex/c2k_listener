@@ -1,7 +1,7 @@
 #!flask/bin/python
 from flask import Flask, jsonify, abort, request, make_response, url_for
 from flask_httpauth import HTTPBasicAuth
-import datetime, requests, os
+import datetime, requests, os, threading, time
 
 ### Setup Flask App and Authentication ###
 app = Flask(__name__, static_url_path = "")
@@ -42,7 +42,7 @@ busses = [
         'route': u'Chicago North 5',
         'status': u'offline',
         'last_location': u'12345',
-        'last_checkin': u'06:05:00'
+        'last_checkin': u''
     }
 ]
 
@@ -128,10 +128,10 @@ def update_bus(bus_name):
     bus[0]['last_checkin'] = datetime.datetime.now().isoformat()
 
     # If bus is previously online, any status update will trigger the bus into an online state and send a spark notification
-    if bus[0]['status'] == "offline":
+    if bus[0]['status'] == "offline" or bus[0]['status'] == "":
         bus[0]['status'] = "online"
         headers = {'content-type': 'application/json'}
-        json_data = '{"appKey":"bus-01-gPHtqNh9Ua","message":"The following bus is online: '+bus_name+'"}'
+        json_data = '{"appKey":"'+c2k_msgbroker_app_key+'","message":"The following bus is online: '+bus_name+'"}'
         r = requests.post("http://"+c2k_msgbroker+"/c2k",json_data, headers=headers)
     elif request.json.get('status', bus[0]['status']) == "offline":
         bus[0]['status'] = "offline"
@@ -155,8 +155,30 @@ def delete_bus(bus_name):
     return jsonify( { 'result': True } )
 
 
+####################################################################
+### Temporary Monitor Thread for Detecting When Bus Goes Offline ###
+### Will be moved to a seperate service using celery next sprint ###
+####################################################################
+class BusMonitor(threading.Thread):
+
+    def run(self):
+        while True:
+            for b in busses:
+                if b['last_checkin'] != "" and b['status'] == "online":
+                    checkin = datetime.datetime.strptime(b['last_checkin'], '%Y-%m-%dT%H:%M:%S.%f')
+                    if datetime.datetime.now() - datetime.timedelta(minutes=3) > checkin:
+                        b['status'] = "offline"
+                        headers = {'content-type': 'application/json'}
+                        json_data = '{"appKey":"' + c2k_msgbroker_app_key + '","message":"The following bus is offline: ' + b['name'] + '"}'
+                        r = requests.post("http://" + c2k_msgbroker + "/c2k", json_data, headers=headers)
+            time.sleep(60)
+
+
 ####################
-### Main Function###
+###  Launch App  ###
 ####################
 if __name__ == '__main__':
+    monitor_job = BusMonitor()
+    monitor_job.daemon = True
+    monitor_job.start()
     app.run(debug = True, host='0.0.0.0', port=int("5000"))
