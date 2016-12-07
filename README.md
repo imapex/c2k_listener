@@ -122,7 +122,7 @@ Follow these steps to install the C2K Listener Service into a lab Mantl stack.
     
 3. Navigate to the Marathon Web GUI and validate the service is online and healthy.
 
-![](c2k_listener_status.png)   
+ ![](c2k_listener_status.png)   
 
 4. Test the service by sending a curl command that retrieves information on all registered busses.  
 
