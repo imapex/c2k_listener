@@ -19,7 +19,7 @@ The total application consists of the following services:
 
 This repository provides the code and details for the C2K Listener Service. The C2K Listener Service listens for updates and data pushed to the listener from one or more C2K IOx applications running on a Cisco 829 router. The listener will receive and store data such as status, GPS coordinates, kids currently on board the bus, and more. Interesting information such as status changes, bus location, kid count, and more can trigger notifications via Spark or SMS via the messaging service.
 
-For phase 1 of C2K, the listener service will simply listen for bus heartbeat messages that indicate the bus is online and in service. When a bus comes online, a Spark message will be triggered in a Spark room.
+For phase 1 of C2K, the listener service will simply listen for bus heartbeat messages that indicate the bus is online and in service. When a bus comes online, a Spark message will be triggered in a Spark room. If several minutes go by without a heartbeat from the router, the listener will take the bus offline and trigger a Spark message in the Spark room.
 
 Additional capabilities such as a persistent database, kid data, GPS tracking, and additional triggered alerts will be added in a future phase.
 
